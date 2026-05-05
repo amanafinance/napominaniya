@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Amana CRM</title>
+  <style>
+    :root {
+      --green-primary: #2d7a3a;
+      --orange: #f59e0b;
+      --blue: #2563eb;
+      --red: #dc2626;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--green-primary);
+    }
+    .header-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .refresh-btn {
+      background: var(--green-primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .refresh-btn:hover { opacity: 0.9; }
+    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .summary-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--border);
+    }
+    .summary-card.near    { border-left-color: var(--orange); }
+    .summary-card.today   { border-left-color: var(--blue); }
+    .summary-card.overdue { border-left-color: var(--red); }
+    .summary-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .summary-value {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .blocks {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .block {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .block-header {
+      padding: 14px 16px;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .block-header.near    { background: var(--orange); }
+    .block-header.today   { background: var(--blue); }
+    .block-header.overdue { background: var(--red); }
+    .block-count {
+      background: rgba(255,255,255,0.25);
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .block-body {
+      padding: 8px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .client {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+    }
+    .client-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+    .client-name {
+      font-weight: 600;
+      font-size: 14px;
+      flex: 1;
+    }
+    .client-contract {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: white;
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .client-info {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 8px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    .client-info .label { color: var(--text-muted); }
+    .client-info .value { font-weight: 500; }
+    .client-info .amount {
+      font-weight: 700;
+    }
+    .client-info .amount-overdue { color: var(--red); }
+
+    .client-buttons {
+      display: flex;
+      gap: 6px;
+    }
+    .call-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .call-btn:hover { opacity: 0.85; }
+    .call-btn.client-btn {
+      background: var(--green-primary);
+      color: white;
+    }
+    .call-btn.guarantor-btn {
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .call-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .loader {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 900px) {
+      .container { padding: 12px; }
+      .header h1 { font-size: 18px; }
+      .summary { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .summary-card { padding: 12px; }
+      .summary-value { font-size: 22px; }
+      .summary-label { font-size: 10px; }
+      .blocks { grid-template-columns: 1fr; }
+      .block-body { max-height: none; }
+    }
+    @media (max-width: 480px) {
+      .summary-card { padding: 10px; }
+      .summary-value { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Amana CRM</h1>
+      <div class="header-info">
+        <span id="updated">—</span>
+        <button class="refresh-btn" id="refreshBtn" onclick="loadData()">↻ Обновить</button>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="summary-card near">
+        <div class="summary-label">Ближайшие 3 дня</div>
+        <div class="summary-value" id="countNear">—</div>
+      </div>
+      <div class="summary-card today">
+        <div class="summary-label">Сегодня</div>
+        <div class="summary-value" id="countToday">—</div>
+      </div>
+      <div class="summary-card overdue">
+        <div class="summary-label">Просрочка</div>
+        <div class="summary-value" id="countOverdue">—</div>
+      </div>
+    </div>
+
+    <div class="blocks">
+      <div class="block">
+        <div class="block-header near">
+          <span>Ближайшие 3 дня</span>
+          <span class="block-count" id="cntNear">0</span>
+        </div>
+        <div class="block-body" id="listNear">
+          <div class="loader">Загрузка...</div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-header today">
+          <span>Сегодня</span>
+          <span class="block-count" id="cntToday">0</span>
+        </div>
+        <div class="block-body" id="listToday">
+          <div class="loader">Загрузка...</div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-header overdue">
+          <span>Просрочка</span>
+          <span class="block-count" id="cntOverdue">0</span>
+        </div>
+        <div class="block-body" id="listOverdue">
+          <div class="loader">Загрузка...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbybRqispPcNEXPnoUL_-AFR3HmNHT9uNyVeZ1T7w6UbMWqcyMRCSCC90Ji9ssG8O1RDow/exec';
+
+    function fmtNum(n) {
+      return (parseFloat(n) || 0).toLocaleString('ru-RU');
+    }
+
+    function fmtPhone(phone) {
+      if (!phone) return '';
+      var p = phone.replace(/\D/g, '');
+      if (p.length === 11) {
+        return '+7 (' + p.slice(1,4) + ') ' + p.slice(4,7) + '-' + p.slice(7,9) + '-' + p.slice(9);
+      }
+      return phone;
+    }
+
+    function svgPhone() {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+    }
+
+    function clientCard(c, type) {
+      var amountClass = type === 'overdue' ? 'amount amount-overdue' : 'amount';
+      var amountLabel = type === 'overdue' ? 'Просрочка' : 'Сумма';
+      var dateRow = (type !== 'overdue' && c.paymentDate)
+        ? '<span class="label">Оплата:</span><span class="value">' + c.paymentDate + '</span>'
+        : '';
+
+      var buttons = '';
+      if (c.phone) {
+        buttons += '<a class="call-btn client-btn" href="tel:+' + c.phone + '">' + svgPhone() + 'Клиент</a>';
+      }
+      if (c.guarantorPhone) {
+        buttons += '<a class="call-btn guarantor-btn" href="tel:+' + c.guarantorPhone + '">' + svgPhone() + 'Поручитель</a>';
+      }
+
+      return '<div class="client">' +
+        '<div class="client-top">' +
+          '<div class="client-name">' + (c.name || '—') + '</div>' +
+          '<div class="client-contract">№ ' + c.contract + '</div>' +
+        '</div>' +
+        '<div class="client-info">' +
+          '<span class="label">' + amountLabel + ':</span>' +
+          '<span class="' + amountClass + '">' + fmtNum(c.amount) + ' ₽</span>' +
+          dateRow +
+          (c.phone ? '<span class="label">Тел:</span><span class="value">' + fmtPhone(c.phone) + '</span>' : '') +
+        '</div>' +
+        (buttons ? '<div class="client-buttons">' + buttons + '</div>' : '') +
+      '</div>';
+    }
+
+    function renderList(elId, list, type) {
+      var el = document.getElementById(elId);
+      if (!list || list.length === 0) {
+        el.innerHTML = '<div class="empty">Нет клиентов</div>';
+        return;
+      }
+      el.innerHTML = list.map(function(c) { return clientCard(c, type); }).join('');
+    }
+
+    function loadData() {
+      var btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.textContent = 'Загрузка...';
+
+      fetch(API_URL + '?action=getControl')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          btn.textContent = '↻ Обновить';
+
+          if (data.error) {
+            alert('Ошибка: ' + data.error);
+            return;
+          }
+
+          var near = data.near || [];
+          var today = data.today || [];
+          var overdue = data.overdue || [];
+
+          document.getElementById('countNear').textContent = near.length;
+          document.getElementById('countToday').textContent = today.length;
+          document.getElementById('countOverdue').textContent = overdue.length;
+
+          document.getElementById('cntNear').textContent = near.length;
+          document.getElementById('cntToday').textContent = today.length;
+          document.getElementById('cntOverdue').textContent = overdue.length;
+
+          renderList('listNear', near, 'near');
+          renderList('listToday', today, 'today');
+          renderList('listOverdue', overdue, 'overdue');
+
+          document.getElementById('updated').textContent = 'Обновлено: ' + (data.updated || '');
+        })
+        .catch(function(err) {
+          btn.disabled = false;
+          btn.textContent = '↻ Обновить';
+          alert('Ошибка соединения');
+          console.error(err);
+        });
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
