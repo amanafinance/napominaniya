@@ -26,11 +26,96 @@
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
     }
+
+    /* ─── ЭКРАН ЛОГИНА ─── */
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+    .login-overlay.hidden { display: none; }
+    .login-box {
+      background: var(--card);
+      padding: 32px 28px;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 380px;
+    }
+    .login-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--green-primary);
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .login-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .login-field {
+      margin-bottom: 14px;
+    }
+    .login-field label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    .login-field input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .login-field input:focus {
+      border-color: var(--green-primary);
+    }
+    .login-error {
+      background: #fef2f2;
+      color: var(--red);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .login-error.visible { display: block; }
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--green-primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      font-family: inherit;
+    }
+    .login-btn:hover { opacity: 0.92; }
+    .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ─── ОСНОВНОЙ САЙТ ─── */
     .container {
       max-width: 1400px;
       margin: 0 auto;
       padding: 20px;
     }
+    .container.hidden { display: none; }
     .header {
       display: flex;
       justify-content: space-between;
@@ -38,6 +123,8 @@
       margin-bottom: 24px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border);
+      gap: 12px;
+      flex-wrap: wrap;
     }
     .header h1 {
       font-size: 22px;
@@ -47,22 +134,31 @@
     .header-info {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
       font-size: 13px;
       color: var(--text-muted);
+      flex-wrap: wrap;
     }
-    .refresh-btn {
-      background: var(--green-primary);
-      color: white;
+    .refresh-btn, .logout-btn {
       border: none;
-      padding: 8px 16px;
+      padding: 8px 14px;
       border-radius: 8px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       transition: opacity 0.2s;
+      font-family: inherit;
     }
-    .refresh-btn:hover { opacity: 0.9; }
+    .refresh-btn {
+      background: var(--green-primary);
+      color: white;
+    }
+    .logout-btn {
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .refresh-btn:hover, .logout-btn:hover { opacity: 0.85; }
     .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .summary {
@@ -237,12 +333,37 @@
   </style>
 </head>
 <body>
-  <div class="container">
+
+  <!-- ═══ ЭКРАН ЛОГИНА ═══ -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <div class="login-title">Amana CRM</div>
+      <div class="login-sub">Войдите чтобы продолжить</div>
+      
+      <div class="login-error" id="loginError"></div>
+      
+      <div class="login-field">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" autocomplete="username" placeholder="bilal@amana.local">
+      </div>
+      
+      <div class="login-field">
+        <label for="loginPassword">Пароль</label>
+        <input type="password" id="loginPassword" autocomplete="current-password">
+      </div>
+      
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">Войти</button>
+    </div>
+  </div>
+
+  <!-- ═══ ОСНОВНОЙ САЙТ ═══ -->
+  <div class="container hidden" id="mainContent">
     <div class="header">
       <h1>Amana CRM</h1>
       <div class="header-info">
         <span id="updated">—</span>
         <button class="refresh-btn" id="refreshBtn" onclick="loadData()">↻ Обновить</button>
+        <button class="logout-btn" onclick="doLogout()">Выйти</button>
       </div>
     </div>
 
@@ -294,6 +415,95 @@
     </div>
   </div>
 
+  <!-- ═══ FIREBASE ═══ -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import {
+      getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence
+    } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCU5aOrwFH4Bfm6W--d-rG_CLLJ-BK-ixM",
+      authDomain: "zvonokamana.firebaseapp.com",
+      projectId: "zvonokamana",
+      storageBucket: "zvonokamana.firebasestorage.app",
+      messagingSenderId: "323555668050",
+      appId: "1:323555668050:web:a4d974a36e29f3527c6f8b"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    
+    // Запоминаем сессию на устройстве
+    setPersistence(auth, browserLocalPersistence);
+
+    // ── Проверка состояния входа при загрузке ──
+    onAuthStateChanged(auth, function(user) {
+      if (user) {
+        document.getElementById('loginOverlay').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        if (typeof loadData === 'function') loadData();
+      } else {
+        document.getElementById('loginOverlay').classList.remove('hidden');
+        document.getElementById('mainContent').classList.add('hidden');
+      }
+    });
+
+    // ── Функции login/logout — пробрасываем в глобальный scope ──
+    window.doLogin = function() {
+      var email = document.getElementById('loginEmail').value.trim();
+      var pass  = document.getElementById('loginPassword').value;
+      var err   = document.getElementById('loginError');
+      var btn   = document.getElementById('loginBtn');
+      
+      err.classList.remove('visible');
+      
+      if (!email || !pass) {
+        err.textContent = 'Введите email и пароль';
+        err.classList.add('visible');
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.textContent = 'Вход...';
+      
+      signInWithEmailAndPassword(auth, email, pass)
+        .then(function() {
+          btn.disabled = false;
+          btn.textContent = 'Войти';
+          document.getElementById('loginPassword').value = '';
+          // onAuthStateChanged сработает автоматически
+        })
+        .catch(function(error) {
+          btn.disabled = false;
+          btn.textContent = 'Войти';
+          var msg = 'Ошибка входа';
+          if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+            msg = 'Неверный email или пароль';
+          } else if (error.code === 'auth/user-not-found') {
+            msg = 'Пользователь не найден';
+          } else if (error.code === 'auth/too-many-requests') {
+            msg = 'Слишком много попыток. Попробуйте позже.';
+          } else if (error.code === 'auth/network-request-failed') {
+            msg = 'Ошибка сети';
+          }
+          err.textContent = msg;
+          err.classList.add('visible');
+        });
+    };
+    
+    window.doLogout = function() {
+      signOut(auth);
+    };
+    
+    // Enter для логина
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !document.getElementById('loginOverlay').classList.contains('hidden')) {
+        window.doLogin();
+      }
+    });
+  </script>
+
+  <!-- ═══ ОСНОВНАЯ ЛОГИКА CRM ═══ -->
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbybRqispPcNEXPnoUL_-AFR3HmNHT9uNyVeZ1T7w6UbMWqcyMRCSCC90Ji9ssG8O1RDow/exec';
 
@@ -394,8 +604,8 @@
           console.error(err);
         });
     }
-
-    loadData();
+    
+    window.loadData = loadData;
   </script>
 </body>
 </html>
