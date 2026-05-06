@@ -91,7 +91,6 @@
     .refresh-btn:hover, .logout-btn:hover { opacity: 0.85; }
     .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* ─── ПОИСК ─── */
     .search-bar {
       background: var(--card);
       border-radius: 12px;
@@ -102,32 +101,19 @@
       align-items: center;
       gap: 10px;
     }
-    .search-icon {
-      color: var(--text-muted);
-      flex-shrink: 0;
-      display: flex;
-    }
+    .search-icon { color: var(--text-muted); flex-shrink: 0; display: flex; }
     .search-icon svg { width: 18px; height: 18px; }
     .search-input {
-      flex: 1;
-      border: none;
-      outline: none;
-      font-size: 14px;
-      font-family: inherit;
-      background: transparent;
-      color: var(--text);
+      flex: 1; border: none; outline: none;
+      font-size: 14px; font-family: inherit;
+      background: transparent; color: var(--text);
     }
     .search-input::placeholder { color: var(--text-muted); }
     .search-clear {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      padding: 4px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-family: inherit;
-      display: none;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-muted); padding: 4px 10px;
+      border-radius: 6px; cursor: pointer;
+      font-size: 12px; font-family: inherit; display: none;
     }
     .search-clear.visible { display: inline-block; }
     .search-clear:hover { background: white; color: var(--text); }
@@ -187,22 +173,14 @@
       border: 1px solid var(--border); white-space: nowrap;
     }
     .client-product {
-      font-size: 12px;
-      color: var(--text);
-      background: white;
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      font-size: 12px; color: var(--text); background: white;
+      padding: 6px 10px; border-radius: 6px;
+      border: 1px solid var(--border); margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
     }
     .client-product svg {
-      width: 13px;
-      height: 13px;
-      color: var(--text-muted);
-      flex-shrink: 0;
+      width: 13px; height: 13px;
+      color: var(--text-muted); flex-shrink: 0;
     }
     .client-info {
       display: grid; grid-template-columns: auto 1fr;
@@ -218,15 +196,38 @@
       flex: 1; padding: 9px; border: none; border-radius: 8px;
       font-size: 12px; font-weight: 600; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      gap: 6px; text-decoration: none; transition: opacity 0.2s;
+      gap: 6px; text-decoration: none; transition: opacity 0.2s, background 0.3s;
       font-family: inherit;
     }
     .action-btn:hover { opacity: 0.88; }
+    .action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .action-btn.call    { background: var(--green-primary); color: white; }
     .action-btn.whatsapp { background: var(--whatsapp); color: white; }
+    .action-btn.success { background: #16a34a !important; }
+    .action-btn.error { background: var(--red) !important; }
     .action-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
 
     .loader { text-align: center; padding: 40px; color: var(--text-muted); }
+
+    /* Toast уведомление */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--text);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+      z-index: 2000;
+      max-width: 90%;
+    }
+    .toast.visible { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #16a34a; }
+    .toast.error { background: var(--red); }
 
     @media (max-width: 900px) {
       .container { padding: 12px; }
@@ -273,7 +274,6 @@
       </div>
     </div>
 
-    <!-- ─── ПОИСК ─── -->
     <div class="search-bar">
       <span class="search-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -329,6 +329,8 @@
       </div>
     </div>
   </div>
+
+  <div class="toast" id="toast"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
@@ -402,8 +404,15 @@
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbybRqispPcNEXPnoUL_-AFR3HmNHT9uNyVeZ1T7w6UbMWqcyMRCSCC90Ji9ssG8O1RDow/exec';
 
-    // Кэш загруженных данных — для фильтра без перезапроса
     var DATA_CACHE = { near: [], today: [], overdue: [] };
+
+    // ── TOAST ──
+    function showToast(message, type) {
+      var t = document.getElementById('toast');
+      t.textContent = message;
+      t.className = 'toast visible' + (type ? ' ' + type : '');
+      setTimeout(function() { t.classList.remove('visible'); }, 3500);
+    }
 
     function buildWhatsAppText(c, type) {
       var firstName = (c.name || '').split(' ')[1] || c.name || 'клиент';
@@ -447,16 +456,86 @@
     function svgPhone() {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
     }
-
     function svgWhatsapp() {
       return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>';
     }
-
     function svgBox() {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
     }
+    function svgCheck() {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    }
+    function svgSpinner() {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="9" opacity="0.25"/><path d="M21 12a9 9 0 0 1-9 9"/></svg><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
+    }
 
-    function clientCard(c, type) {
+    // ── ЗВОНОК ЧЕРЕЗ ZVONOK ──
+    function makeCall(btnEl, c, type) {
+      if (btnEl.disabled) return;
+      
+      var confirmMsg = 'Запустить звонок-напоминание клиенту:\n\n'
+        + (c.name || '') + '\n'
+        + 'Тел: ' + fmtPhone(c.phone) + '\n'
+        + 'Сумма: ' + fmtNum(c.amount) + ' ₽\n\n'
+        + 'Робот сейчас позвонит и зачитает напоминание.';
+      
+      if (!confirm(confirmMsg)) return;
+      
+      btnEl.disabled = true;
+      var originalHTML = btnEl.innerHTML;
+      btnEl.innerHTML = svgSpinner() + 'Запускаю...';
+      
+      var params = new URLSearchParams({
+        action: 'makeCall',
+        phone: c.phone || '',
+        type: type,
+        name: c.name || '',
+        amount: String(c.amount || 0),
+        contract: c.contract || '',
+        paymentDate: c.paymentDate || ''
+      });
+      
+      fetch(API_URL + '?' + params.toString())
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.error) {
+            btnEl.innerHTML = svgPhone() + 'Ошибка';
+            btnEl.classList.add('error');
+            showToast('Ошибка: ' + data.error, 'error');
+            setTimeout(function() {
+              btnEl.disabled = false;
+              btnEl.innerHTML = originalHTML;
+              btnEl.classList.remove('error');
+            }, 4000);
+            return;
+          }
+          
+          btnEl.innerHTML = svgCheck() + 'Запущен';
+          btnEl.classList.add('success');
+          showToast('Звонок запущен', 'success');
+          
+          // Через 5 сек разблокируем кнопку
+          setTimeout(function() {
+            btnEl.disabled = false;
+            btnEl.innerHTML = originalHTML;
+            btnEl.classList.remove('success');
+          }, 5000);
+        })
+        .catch(function(err) {
+          btnEl.innerHTML = svgPhone() + 'Ошибка';
+          btnEl.classList.add('error');
+          showToast('Ошибка соединения', 'error');
+          console.error(err);
+          setTimeout(function() {
+            btnEl.disabled = false;
+            btnEl.innerHTML = originalHTML;
+            btnEl.classList.remove('error');
+          }, 4000);
+        });
+    }
+    window.makeCall = makeCall;
+
+    function clientCard(c, type, idx) {
       var amountClass = type === 'overdue' ? 'amount amount-overdue' : 'amount';
       var amountLabel = type === 'overdue' ? 'Просрочка' : 'Сумма';
       var dateRow = (type !== 'overdue' && c.paymentDate)
@@ -469,8 +548,13 @@
 
       var buttons = '';
       if (c.phone) {
+        // Звонок через Zvonok — кнопка вызывает makeCall()
+        var btnId = 'callBtn_' + type + '_' + idx;
+        buttons += '<button class="action-btn call" id="' + btnId + '" '
+          + 'onclick="makeCall(this, DATA_CACHE.' + type + '[' + idx + '], \'' + type + '\')">'
+          + svgPhone() + 'Звонок</button>';
+        
         var waPhone = normalizePhone(c.phone);
-        buttons += '<a class="action-btn call" href="tel:+' + waPhone + '">' + svgPhone() + 'Звонок</a>';
         var waText = buildWhatsAppText(c, type);
         var waUrl = 'https://wa.me/' + waPhone + '?text=' + encodeURIComponent(waText);
         buttons += '<a class="action-btn whatsapp" href="' + waUrl + '" target="_blank" rel="noopener">' + svgWhatsapp() + 'WhatsApp</a>';
@@ -492,25 +576,18 @@
       '</div>';
     }
 
-    // ─── ПОИСК / ФИЛЬТРАЦИЯ ───
+    // ─── Поиск ───
     function matchesSearch(c, query) {
       if (!query) return true;
       var q = query.toLowerCase().trim();
-      // Только цифры (для поиска по сумме)
       var qDigits = q.replace(/[^\d]/g, '');
-      
-      // По имени
       if (c.name && c.name.toLowerCase().indexOf(q) !== -1) return true;
-      
-      // По сумме (если в запросе есть цифры) — ищем подстроку в числовом значении
       if (qDigits.length > 0) {
         var amountStr = String(c.amount || 0);
         if (amountStr.indexOf(qDigits) !== -1) return true;
-        // Также по форматированной сумме (на случай ввода с пробелами/точками)
         var formatted = fmtNum(c.amount).replace(/\s/g, '');
         if (formatted.indexOf(qDigits) !== -1) return true;
       }
-      
       return false;
     }
 
@@ -525,17 +602,19 @@
         el.innerHTML = '<div class="empty">Нет клиентов</div>';
         return;
       }
-      el.innerHTML = list.map(function(c) { return clientCard(c, type); }).join('');
+      // Используем индекс из ОРИГИНАЛЬНОГО кэша, чтобы кнопка звонка работала
+      el.innerHTML = list.map(function(c) {
+        var origIdx = DATA_CACHE[type].indexOf(c);
+        return clientCard(c, type, origIdx);
+      }).join('');
     }
 
     function applyFilter() {
       var q = document.getElementById('searchInput').value;
-      
       var nearF    = filterList(DATA_CACHE.near, q);
       var todayF   = filterList(DATA_CACHE.today, q);
       var overdueF = filterList(DATA_CACHE.overdue, q);
       
-      // Обновляем счётчики (показывают отфильтрованное)
       document.getElementById('countNear').textContent = nearF.length;
       document.getElementById('countToday').textContent = todayF.length;
       document.getElementById('countOverdue').textContent = overdueF.length;
@@ -547,16 +626,12 @@
       renderList('listToday', todayF, 'today');
       renderList('listOverdue', overdueF, 'overdue');
       
-      // Кнопка очистки
       var clearBtn = document.getElementById('searchClear');
       if (q) clearBtn.classList.add('visible');
       else clearBtn.classList.remove('visible');
     }
 
-    window.onSearchInput = function() {
-      applyFilter();
-    };
-
+    window.onSearchInput = function() { applyFilter(); };
     window.clearSearch = function() {
       document.getElementById('searchInput').value = '';
       applyFilter();
@@ -573,13 +648,11 @@
           btn.disabled = false;
           btn.textContent = '↻ Обновить';
           if (data.error) { alert('Ошибка: ' + data.error); return; }
-          
           DATA_CACHE.near    = data.near    || [];
           DATA_CACHE.today   = data.today   || [];
           DATA_CACHE.overdue = data.overdue || [];
-          
+          window.DATA_CACHE = DATA_CACHE;
           applyFilter();
-          
           document.getElementById('updated').textContent = 'Обновлено: ' + (data.updated || '');
         })
         .catch(function(err) {
@@ -590,6 +663,7 @@
         });
     }
     window.loadData = loadData;
+    window.DATA_CACHE = DATA_CACHE;
   </script>
 </body>
 </html>
