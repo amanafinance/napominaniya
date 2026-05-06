@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>Amana CRM</title>
+  <title>Amana Finance — Напоминания</title>
   <style>
     :root {
       --green-primary: #2d7a3a;
@@ -73,7 +73,7 @@
     .container.hidden { display: none; }
     .header {
       display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+      margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
       gap: 12px; flex-wrap: wrap;
     }
     .header h1 { font-size: 22px; font-weight: 700; color: var(--green-primary); }
@@ -90,6 +90,47 @@
     .logout-btn { background: white; color: var(--text); border: 1px solid var(--border); }
     .refresh-btn:hover, .logout-btn:hover { opacity: 0.85; }
     .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ─── ПОИСК ─── */
+    .search-bar {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .search-icon {
+      color: var(--text-muted);
+      flex-shrink: 0;
+      display: flex;
+    }
+    .search-icon svg { width: 18px; height: 18px; }
+    .search-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      font-family: inherit;
+      background: transparent;
+      color: var(--text);
+    }
+    .search-input::placeholder { color: var(--text-muted); }
+    .search-clear {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      display: none;
+    }
+    .search-clear.visible { display: inline-block; }
+    .search-clear:hover { background: white; color: var(--text); }
 
     .summary {
       display: grid; grid-template-columns: repeat(3, 1fr);
@@ -207,8 +248,8 @@
 
   <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
-      <div class="login-title">Amana CRM</div>
-      <div class="login-sub">Войдите чтобы продолжить</div>
+      <div class="login-title">Amana Finance</div>
+      <div class="login-sub">Напоминания — войдите чтобы продолжить</div>
       <div class="login-error" id="loginError"></div>
       <div class="login-field">
         <label for="loginEmail">Email</label>
@@ -224,12 +265,21 @@
 
   <div class="container hidden" id="mainContent">
     <div class="header">
-      <h1>Amana CRM</h1>
+      <h1>Amana Finance — Напоминания</h1>
       <div class="header-info">
         <span id="updated">—</span>
         <button class="refresh-btn" id="refreshBtn" onclick="loadData()">↻ Обновить</button>
         <button class="logout-btn" onclick="doLogout()">Выйти</button>
       </div>
+    </div>
+
+    <!-- ─── ПОИСК ─── -->
+    <div class="search-bar">
+      <span class="search-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </span>
+      <input type="text" class="search-input" id="searchInput" placeholder="Поиск по ФИО или сумме во всех блоках" oninput="onSearchInput()">
+      <button class="search-clear" id="searchClear" onclick="clearSearch()">Очистить</button>
     </div>
 
     <div class="summary">
@@ -352,6 +402,9 @@
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbybRqispPcNEXPnoUL_-AFR3HmNHT9uNyVeZ1T7w6UbMWqcyMRCSCC90Ji9ssG8O1RDow/exec';
 
+    // Кэш загруженных данных — для фильтра без перезапроса
+    var DATA_CACHE = { near: [], today: [], overdue: [] };
+
     function buildWhatsAppText(c, type) {
       var firstName = (c.name || '').split(' ')[1] || c.name || 'клиент';
       var amount = fmtNum(c.amount);
@@ -439,6 +492,33 @@
       '</div>';
     }
 
+    // ─── ПОИСК / ФИЛЬТРАЦИЯ ───
+    function matchesSearch(c, query) {
+      if (!query) return true;
+      var q = query.toLowerCase().trim();
+      // Только цифры (для поиска по сумме)
+      var qDigits = q.replace(/[^\d]/g, '');
+      
+      // По имени
+      if (c.name && c.name.toLowerCase().indexOf(q) !== -1) return true;
+      
+      // По сумме (если в запросе есть цифры) — ищем подстроку в числовом значении
+      if (qDigits.length > 0) {
+        var amountStr = String(c.amount || 0);
+        if (amountStr.indexOf(qDigits) !== -1) return true;
+        // Также по форматированной сумме (на случай ввода с пробелами/точками)
+        var formatted = fmtNum(c.amount).replace(/\s/g, '');
+        if (formatted.indexOf(qDigits) !== -1) return true;
+      }
+      
+      return false;
+    }
+
+    function filterList(list, query) {
+      if (!query) return list;
+      return list.filter(function(c) { return matchesSearch(c, query); });
+    }
+
     function renderList(elId, list, type) {
       var el = document.getElementById(elId);
       if (!list || list.length === 0) {
@@ -447,6 +527,41 @@
       }
       el.innerHTML = list.map(function(c) { return clientCard(c, type); }).join('');
     }
+
+    function applyFilter() {
+      var q = document.getElementById('searchInput').value;
+      
+      var nearF    = filterList(DATA_CACHE.near, q);
+      var todayF   = filterList(DATA_CACHE.today, q);
+      var overdueF = filterList(DATA_CACHE.overdue, q);
+      
+      // Обновляем счётчики (показывают отфильтрованное)
+      document.getElementById('countNear').textContent = nearF.length;
+      document.getElementById('countToday').textContent = todayF.length;
+      document.getElementById('countOverdue').textContent = overdueF.length;
+      document.getElementById('cntNear').textContent = nearF.length;
+      document.getElementById('cntToday').textContent = todayF.length;
+      document.getElementById('cntOverdue').textContent = overdueF.length;
+      
+      renderList('listNear', nearF, 'near');
+      renderList('listToday', todayF, 'today');
+      renderList('listOverdue', overdueF, 'overdue');
+      
+      // Кнопка очистки
+      var clearBtn = document.getElementById('searchClear');
+      if (q) clearBtn.classList.add('visible');
+      else clearBtn.classList.remove('visible');
+    }
+
+    window.onSearchInput = function() {
+      applyFilter();
+    };
+
+    window.clearSearch = function() {
+      document.getElementById('searchInput').value = '';
+      applyFilter();
+      document.getElementById('searchInput').focus();
+    };
 
     function loadData() {
       var btn = document.getElementById('refreshBtn');
@@ -458,16 +573,13 @@
           btn.disabled = false;
           btn.textContent = '↻ Обновить';
           if (data.error) { alert('Ошибка: ' + data.error); return; }
-          var near = data.near || [], today = data.today || [], overdue = data.overdue || [];
-          document.getElementById('countNear').textContent = near.length;
-          document.getElementById('countToday').textContent = today.length;
-          document.getElementById('countOverdue').textContent = overdue.length;
-          document.getElementById('cntNear').textContent = near.length;
-          document.getElementById('cntToday').textContent = today.length;
-          document.getElementById('cntOverdue').textContent = overdue.length;
-          renderList('listNear', near, 'near');
-          renderList('listToday', today, 'today');
-          renderList('listOverdue', overdue, 'overdue');
+          
+          DATA_CACHE.near    = data.near    || [];
+          DATA_CACHE.today   = data.today   || [];
+          DATA_CACHE.overdue = data.overdue || [];
+          
+          applyFilter();
+          
           document.getElementById('updated').textContent = 'Обновлено: ' + (data.updated || '');
         })
         .catch(function(err) {
