@@ -209,7 +209,6 @@
 
     .loader { text-align: center; padding: 40px; color: var(--text-muted); }
 
-    /* Toast уведомление */
     .toast {
       position: fixed;
       bottom: 24px;
@@ -406,7 +405,6 @@
 
     var DATA_CACHE = { near: [], today: [], overdue: [] };
 
-    // ── TOAST ──
     function showToast(message, type) {
       var t = document.getElementById('toast');
       t.textContent = message;
@@ -417,18 +415,20 @@
     function buildWhatsAppText(c, type) {
       var firstName = (c.name || '').split(' ')[1] || c.name || 'клиент';
       var amount = fmtNum(c.amount);
+      var product = c.product || 'товар';
       if (type === 'near') {
-        return 'Здравствуйте, ' + firstName + '! Напоминаем: ' + (c.paymentDate || '')
-          + ' у вас платёж по договору №' + c.contract
-          + ' в сумме ' + amount + ' ₽. Просим внести оплату вовремя. Amana Finance';
+        return 'Здравствуйте, ' + firstName + '. Напоминаем о приближении даты платежа по рассрочке — '
+          + amount + ' ₽ за ' + product + ' до ' + (c.paymentDate || '')
+          + '. Просим внести оплату вовремя. Amana Finance';
       }
       if (type === 'today') {
-        return 'Здравствуйте, ' + firstName + '! Сегодня день оплаты по договору №' + c.contract
-          + ' в сумме ' + amount + ' ₽. Просим внести платёж до конца дня. Amana Finance';
+        return 'Здравствуйте, ' + firstName + '. Сегодня день оплаты по рассрочке — '
+          + amount + ' ₽ за ' + product + ', просим внести оплату до конца дня. Amana Finance';
       }
       if (type === 'overdue') {
-        return 'Здравствуйте, ' + firstName + '! У вас просроченный платёж по договору №' + c.contract
-          + ' в сумме ' + amount + ' ₽. Просим погасить задолженность как можно скорее. Amana Finance';
+        return 'Здравствуйте, ' + firstName + '. У вас просрочка — '
+          + amount + ' ₽ за ' + product
+          + '. Просим погасить задолженность как можно скорее. Amana Finance';
       }
       return '';
     }
@@ -469,7 +469,6 @@
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="9" opacity="0.25"/><path d="M21 12a9 9 0 0 1-9 9"/></svg><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
     }
 
-    // ── ЗВОНОК ЧЕРЕЗ ZVONOK ──
     function makeCall(btnEl, c, type) {
       if (btnEl.disabled) return;
       
@@ -490,6 +489,7 @@
         phone: c.phone || '',
         type: type,
         name: c.name || '',
+        product: c.product || '',
         amount: String(c.amount || 0),
         contract: c.contract || '',
         paymentDate: c.paymentDate || ''
@@ -514,7 +514,6 @@
           btnEl.classList.add('success');
           showToast('Звонок запущен', 'success');
           
-          // Через 5 сек разблокируем кнопку
           setTimeout(function() {
             btnEl.disabled = false;
             btnEl.innerHTML = originalHTML;
@@ -548,7 +547,6 @@
 
       var buttons = '';
       if (c.phone) {
-        // Звонок через Zvonok — кнопка вызывает makeCall()
         var btnId = 'callBtn_' + type + '_' + idx;
         buttons += '<button class="action-btn call" id="' + btnId + '" '
           + 'onclick="makeCall(this, DATA_CACHE.' + type + '[' + idx + '], \'' + type + '\')">'
@@ -576,7 +574,6 @@
       '</div>';
     }
 
-    // ─── Поиск ───
     function matchesSearch(c, query) {
       if (!query) return true;
       var q = query.toLowerCase().trim();
@@ -602,7 +599,6 @@
         el.innerHTML = '<div class="empty">Нет клиентов</div>';
         return;
       }
-      // Используем индекс из ОРИГИНАЛЬНОГО кэша, чтобы кнопка звонка работала
       el.innerHTML = list.map(function(c) {
         var origIdx = DATA_CACHE[type].indexOf(c);
         return clientCard(c, type, origIdx);
